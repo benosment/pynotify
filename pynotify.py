@@ -3,6 +3,7 @@ import logging
 import logging.config
 import os
 import smtplib
+import subprocess
 from email.generator import Generator
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
@@ -51,13 +52,22 @@ def send_email(subject, body):
 
 
 def run_command(command):
-    return command
+    try:
+        logging.debug('command: %s' % ' '.join(command))
+        output = subprocess.check_output(command)
+    except Exception as e:
+        logging.error("%s call failed" % ' '.join(command))
+        logging.exception(e)
+        output = str(e)
+    return output
 
 
 if __name__ == '__main__':
     # init logger
     logging.config.dictConfig(settings.LOGGING)
-    command = ' '.join(sys.argv[1:])
-    logging.debug('command: %s' % command)
+    command = sys.argv[1:]
+    # TODO - start timer
     output = run_command(command)
-    send_email('%s: finished' % command, output)
+    # TODO - end timer
+    # TODO - add timer output to command output
+    send_email('pynotify - "%s" finished' % ' '.join(command), output)
