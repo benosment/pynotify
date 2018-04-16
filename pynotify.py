@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import sys
 import logging
 import logging.config
@@ -9,14 +11,13 @@ from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import StringIO
-
+import datetime
 import settings
 
 
 def send_email(subject, body):
     gmail_user = os.environ.get('MAIL_USERNAME')
     gmail_password = os.environ.get('MAIL_PASSWORD')
-
     if not gmail_user or not gmail_password:
         raise EnvironmentError('invalid user or password for sending mail')
 
@@ -34,6 +35,7 @@ def send_email(subject, body):
     msg['To'] = '"%s" <%s>' % (Header(recipient[0], 'utf-8'), recipient[1])
 
     html_body = MIMEText(body, 'html', 'UTF-8')
+
     msg.attach(html_body)
     str_io = StringIO()
     gen = Generator(str_io, False)
@@ -52,22 +54,27 @@ def send_email(subject, body):
 
 
 def run_command(command):
+    start_time = datetime.datetime.now()
     try:
         logging.debug('command: %s' % ' '.join(command))
         output = subprocess.check_output(command)
+        output = output.decode('utf-8')
+        output = output.replace('\n', '<br>')
     except Exception as e:
         logging.error("%s call failed" % ' '.join(command))
         logging.exception(e)
         output = str(e)
+    end_time = datetime.datetime.now()
+    output = 'Start time: %s<br> End time: %s<br>Elapsed: %s<br><br><br> %s' % (start_time, end_time,
+                                                                                datetime.timedelta.total_seconds(
+                                                                                 end_time - start_time), output)
     return output
+
 
 
 if __name__ == '__main__':
     # init logger
     logging.config.dictConfig(settings.LOGGING)
     command = sys.argv[1:]
-    # TODO - start timer
     output = run_command(command)
-    # TODO - end timer
-    # TODO - add timer output to command output
     send_email('pynotify - "%s" finished' % ' '.join(command), output)
